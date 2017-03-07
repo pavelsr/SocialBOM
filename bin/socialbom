@@ -1,0 +1,14 @@
+#!perl
+
+package socialbom;
+
+# ABSTRACT: SocialBOM CLI tool
+
+use strict;
+use warnings;
+use Net::EmptyPort qw(empty_port);
+
+# Start commands for application
+require Mojolicious::Commands;
+my $port = empty_port(3000);
+Mojolicious::Commands->start_app('App::SocialBOM', 'daemon', '-l', 'http://*:'.$port);

@@ -1,0 +1,110 @@
+<!DOCTYPE HTML>
+ <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Welcome to SocialBOM</title>
+
+    <link rel="stylesheet" type="text/css" href="vendor/bootstrap-3.3.6-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="vendor/ui-grid.min.css">
+
+    <script type="text/javascript" src="vendor/bootstrap-3.3.6-dist/js/bootstrap.min.js" ></script>
+	<script type="text/javascript" src="vendor/angular.min.js" ></script>
+	<script type="text/javascript" src="vendor/angular-resource.js"></script>
+	<script type="text/javascript" src="vendor/angular-route.js"></script>
+	<script type="text/javascript" src="vendor/ui-grid.min.js"></script>
+	<script type="text/javascript" src="vendor/restangular.min.js"></script>
+    
+    <script type="text/javascript" src="js/app.js"></script>
+    <script type="text/javascript" src="js/routes.js"></script>
+    <script type="text/javascript" src="js/services/ng-resources.js"></script>
+	<script type="text/javascript" src="js/directives/directives.js"></script>
+
+	<script type="text/javascript" src="js/controllers/boms.js"></script>
+	<script type="text/javascript" src="js/controllers/items.js"></script>
+	<script type="text/javascript" src="js/controllers/shops.js"></script>
+
+	<script type="text/javascript" src="js/filters/cost-filter.js"></script>
+ </head>
+
+ <body ng-app="main">
+
+ 	<div class="container-fluid">
+
+		 	<test-directive></test-directive>
+		 	<div ng-view></div>
+
+	 		<div class="row">
+	 			<div class="col-md-12" ng-controller="BomsController as b" ng-hide='factory.current_bom'>
+			 		<h1>Мои BOMчики</h1>
+			 		<p> Всего: {{ boms_grid.data.length }}</p>
+			 		<button ng-click="b.new()"><span class="glyphicon glyphicon-plus"></span>Новый BOM</button>
+					<div>
+					 	<div ui-grid="grid_obj" ui-grid-edit class="grid" ui-grid-resize-columns></div>
+					</div>
+				</div>
+			</div>
+
+			<div class="row main-row" ng-controller="ItemsController as i">
+				<div class="col-md-12">
+
+					<div class="row" ng-show="factory.current_bom">
+						<div class="col-md-12">
+							<h1>Сборочные единицы BOM "{{factory.current_bom.name}}" <button ng-click="factory.current_bom = ''; factory.current_item = ''">Назад к списку BOM</button></h1>
+								<p>Минимальная стоимость BOM: {{ bom_min_max_costs | filter_min }} RUB</p>
+								<p>Максимальная стоимость BOM: {{ bom_min_max_costs | filter_max }} RUB</p>
+						</div>
+					</div>
+
+					<div class="row">
+						<div ng-class="factory.current_item ? 'col-md-6' : 'col-md-12'">
+							<div class="child_item_wrapper" ng-if="factory.current_bom">
+
+								<div class="row">
+									
+									<div class="cold-md-6">
+										<h1>Категории</h1>
+									</div>
+									
+									<div class="cold-md-6">
+										<h1>Подсистемы</h1>
+									</div>
+								</div>
+
+								<h1>Список деталей </h1>
+								<button ng-click="i.new()"><span class="glyphicon glyphicon-plus"></span> Новая деталь</button>
+								<div>
+								 	<div ui-grid="grid_obj" ui-grid-edit class="grid" ui-grid-auto-resize ui-grid-resize-columns></div>
+									{{curr_item_debug.name }} - min: {{curr_item_debug.min_cost }} - max: {{curr_item_debug.max_cost }}
+								</div>
+							</div>
+						</div>
+
+						<div class="col-md-6" ng-controller="ShopsController as s">
+							<div class="child_item_wrapper" ng-show="factory.current_item">
+								<h1>Где купить {{factory.current_item.name}} </h1>
+								<p>Минимальная стоимость: {{ grid_obj.data | cost_extractor | convert_to_one_currency:rates:'RUB' | min_cost }} RUB </p>
+								<p>Максимальная стоимость: {{ grid_obj.data | cost_extractor | convert_to_one_currency:rates:'RUB' | max_cost }} RUB </p>
+								<p>Курсы: {{rates}} </p>
+								<button ng-click="s.new()">Нашёл ещё продавца!</button>
+								<div ui-grid="grid_obj" ui-grid-edit class="grid" ui-grid-auto-resize></div>
+							</div>
+						</div>
+					</div>
+
+
+				</div>
+			</div>
+
+
+			<div class="row">
+				<div class="col-md-12">
+				Прототип сервиса <a href="http://awards.fab10.org/browse/projects/77">SocialBOM</a>. Made by <a href="http://serikov.xyz">Pavel Serikov</a>
+				</div>
+				<div class="col-md=12"><p>factory: {{factory}} </p></div>
+			</div>
+
+	</div>
+
+ </body>
+</html>
+
+
