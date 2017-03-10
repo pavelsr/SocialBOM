@@ -10,7 +10,11 @@ use strict;
 use warnings;
 # use Net::EmptyPort qw(empty_port);
 use Mojolicious::Commands;
-require App::SocialBOM;
+
+use App::SocialBOM;
+
+my $app_path = $INC{"App/SocialBOM.pm"};
+warn Dumper $app_path;
 
 # my $app = 'App::SocialBOM';
 

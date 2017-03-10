@@ -194,7 +194,7 @@ get '/rates' => sub {
 };
 
 
-push @{app->commands->namespaces}, 'App::SocialBOM::Command::cmd1';
+push @{app->commands->namespaces}, 'App::SocialBOM::Command';
 app->start;
 
 1;
