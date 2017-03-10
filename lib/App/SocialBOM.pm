@@ -9,12 +9,12 @@ use App::SocialBOM::Url qw(get_new_url);
 
 use feature "say";
 
-# my $config = plugin 'Config';
+my $config = plugin 'Config';
 
 use MongoDB;
 
 my $client = MongoDB->connect('mongodb://localhost');
-my $db = $client->get_database('social_bom');
+my $db = $client->get_database($config->{database});
 
 
 sub db_func {
@@ -177,6 +177,11 @@ get '/time' => sub {
 	$self->render(json=>Time::Moment->now_utc);
 };
 
+get '/debug' => sub {
+	my $self = shift;
+	$self->render(json => { namespaces => app->commands->namespaces });
+};
+
 
 get '/rates' => sub {
   my $self = shift;
@@ -189,4 +194,7 @@ get '/rates' => sub {
 };
 
 
+push @{app->commands->namespaces}, 'App::SocialBOM::Command::cmd1';
 app->start;
+
+1;

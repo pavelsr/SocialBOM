@@ -2,13 +2,38 @@
 
 package socialbom;
 
+use Data::Dumper;
+
 # ABSTRACT: SocialBOM CLI tool
 
 use strict;
 use warnings;
-use Net::EmptyPort qw(empty_port);
+# use Net::EmptyPort qw(empty_port);
+use Mojolicious::Commands;
+require App::SocialBOM;
 
-# Start commands for application
-require Mojolicious::Commands;
-my $port = empty_port(3000);
-Mojolicious::Commands->start_app('App::SocialBOM', 'daemon', '-l', 'http://*:'.$port);
+# my $app = 'App::SocialBOM';
+
+# my $module = $app;
+# $module =~ s/::/\//g;
+# $module =~ s/$/.pm/;
+
+# warn $module;
+
+# my $app_path = $INC{$module};
+
+# warn Dumper $app_path;
+# my $port = 3000;
+
+# if ($ARGV[0] eq 'morbo') {
+	# $port = empty_port(3000);
+	# Mojolicious::Commands->start_app($app, 'daemon', '-l', 'http://*:'.$port);	
+# }
+
+# if ($ARGV[0] eq 'hypnotoad') {
+# 	$port = empty_port(8000);
+# 	Mojolicious::Commands->start_app('App::SocialBOM', 'daemon', '-l', 'http://*:'.$port);
+# }
+
+
+Mojolicious::Commands->start_app('App::SocialBOM' => @ARGV);
