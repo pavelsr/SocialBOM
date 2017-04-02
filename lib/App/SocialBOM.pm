@@ -6,6 +6,7 @@ use Mojolicious::Lite;
 use Data::Dumper;
 use Time::Moment;
 use App::SocialBOM::Url qw(get_new_url);
+#use HTML::TagParser;
 
 use feature "say";
 
@@ -29,7 +30,7 @@ helper post_helper => sub {
 	given($coll_name) {
 		when ("boms") { $hash->{url} = get_new_url(5, \&db_func, "url"); }
 	}
-	return $hash; 
+	return $hash;
 }; 
 
 #### CRUD API
@@ -126,6 +127,7 @@ get '/api/:coll' => sub {
 	}
 };
 
+
 get '/api/:coll/:id' => sub {
 	# CRUD - Read
 	my $self = shift;
@@ -152,13 +154,12 @@ put '/api/:coll/:id' => sub {
 	$self->render(json => $self->update_one($self->param("coll"), $self->param("id"), $self->req->json) );
 };
 
+
 del '/api/:coll/:id' => sub {
 	# CRUD - Delete. Remove item by ID
 	my $self = shift;
 	$self->render(json=>$self->delete_one( $self->param("coll"), $self->param("id") ) );
 };
-
-
 
 ############################
 
@@ -193,6 +194,21 @@ get '/rates' => sub {
   $self->render(json => {"USD" => $usd, "EUR" => $eur});
 };
 
+
+get '/parser' => sub {
+  my $self = shift;
+  my $url = $self->req->param('url');
+
+  my $q_index = index $url, '?';
+  $url = substr $url, 0, $q_index;
+  my $list = `curl $url 2> /dev/null | grep j-sku-price | awk -F">" '{ print $2 }' | awk -F"<" '{ print $1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+  warn "LIST : " .$list;
+  my $ind = 1 + index $list, '>';
+  my $ind2 = index $list, "<", $ind;
+  $list = substr $list, $ind, $ind2 - $ind;
+  
+  $self->render(json => {"price" => $list});
+};
 
 push @{app->commands->namespaces}, 'App::SocialBOM::Command';
 app->start;
