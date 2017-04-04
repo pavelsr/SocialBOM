@@ -6,7 +6,6 @@ use Mojolicious::Lite;
 use Data::Dumper;
 use Time::Moment;
 use App::SocialBOM::Url qw(get_new_url);
-#use HTML::TagParser;
 
 use feature "say";
 
@@ -194,6 +193,7 @@ get '/rates' => sub {
   $self->render(json => {"USD" => $usd, "EUR" => $eur});
 };
 
+######################## Parser  ####################################
 
 get '/parser' => sub {
   my $self = shift;
@@ -201,7 +201,36 @@ get '/parser' => sub {
 
   my $q_index = index $url, '?';
   $url = substr $url, 0, $q_index;
-  my $list = `curl $url 2> /dev/null | grep j-sku-price | awk -F">" '{ print $2 }' | awk -F"<" '{ print $1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+
+# price with discount
+  my $list = `curl "$url" 2> /dev/null | grep j-sku-discount-price | awk -F">" '{ print  \$2}' | awk -F"<" '{ print \$1}' | sed 's/&nbsp;//g; s/,/./g'`;
+
+if ($list eq "")
+{
+# price without discount 
+	$list = `curl "$url" 2> /dev/null | grep j-sku-price | awk -F">" '{ print  \$2}' | awk -F"<" '{ print \$1}' | sed 's/&nbsp;//g; s/,/./g'`;
+}
+=pod	
+if ($list eq "") 
+{
+#price with diapason & discount
+	print "price with discount & diaposon", "\n";
+	$list = `curl "$url" 2> /dev/null | grep j-sku-discount-price | awk -F 'lowPrice">' '{ print  \$2}' | awk -F"<" '{ print \$1}' | sed 's/&nbsp;//g; s/,/./g'`;
+}
+
+}
+
+my $ind = 1 + index $list, '>';
+my $ind2 = index $list, "<", $ind;
+
+$list = substr $list, $ind, $ind2 - $ind;
+
+$ind2 = index $list, '-';
+if ($ind2 != -1){
+	$list = substr $list, 0, $ind2;
+}
+=cut
+
   warn "LIST : " .$list;
   my $ind = 1 + index $list, '>';
   my $ind2 = index $list, "<", $ind;
@@ -209,6 +238,8 @@ get '/parser' => sub {
   
   $self->render(json => {"price" => $list});
 };
+
+######################## Parser  ####################################
 
 push @{app->commands->namespaces}, 'App::SocialBOM::Command';
 app->start;
