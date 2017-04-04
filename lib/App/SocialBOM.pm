@@ -194,20 +194,32 @@ get '/rates' => sub {
   $self->render(json => {"USD" => $usd, "EUR" => $eur});
 };
 
-
+# HTMLParser
 get '/parser' => sub {
   my $self = shift;
   my $url = $self->req->param('url');
 
-  my $q_index = index $url, '?';
-  $url = substr $url, 0, $q_index;
-  my $list = `curl $url 2> /dev/null | grep j-sku-price | awk -F">" '{ print $2 }' | awk -F"<" '{ print $1 }' | sed 's/&nbsp;//g; s/,/./g'`;
-  warn "LIST : " .$list;
-  my $ind = 1 + index $list, '>';
-  my $ind2 = index $list, "<", $ind;
-  $list = substr $list, $ind, $ind2 - $ind;
-  
-  $self->render(json => {"price" => $list});
+  # price with discount and diaposone
+  my $price = `curl "$url" 2> /dev/null | grep lowPrice | awk -F">" '{ print \$3 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+
+  if ($price eq "" || $price eq "\n")
+  {
+    # price with discount
+    $price = `curl "$url" 2> /dev/null | grep j-sku-discount-price | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+
+    if ($price eq "" || $price eq "\n")
+    {
+      # price without discount
+	  $price = `curl "$url" 2> /dev/null | grep j-sku-price | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+      my $ind = index $price, '-';
+      if ($ind != -1)
+      {
+	    $price = substr $price, 0, $ind;
+      }
+    }
+  }
+
+  $self->render(json => {"price" => $price});
 };
 
 push @{app->commands->namespaces}, 'App::SocialBOM::Command';
