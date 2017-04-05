@@ -194,33 +194,64 @@ get '/rates' => sub {
   $self->render(json => {"USD" => $usd, "EUR" => $eur});
 };
 
-# HTMLParser
+# HTML_PARSER
 get '/parser' => sub {
   my $self = shift;
   my $url = $self->req->param('url');
-
-  # price with discount and diaposone
-  my $price = `curl "$url" 2> /dev/null | grep lowPrice | awk -F">" '{ print \$3 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
-
-  if ($price eq "" || $price eq "\n")
+  
+  # PARSER FOR ALIEXPRESS
+  if (index($url, "aliexpress.com") != -1)
   {
-    # price with discount
-    $price = `curl "$url" 2> /dev/null | grep j-sku-discount-price | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+  
+    # price with discount and interval
+    my $price = `curl "$url" 2> /dev/null | grep lowPrice | awk -F">" '{ print \$3 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
 
     if ($price eq "" || $price eq "\n")
     {
-      # price without discount
-	  $price = `curl "$url" 2> /dev/null | grep j-sku-price | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
-      my $ind = index $price, '-';
-      if ($ind != -1)
+      # price with discount
+      $price = `curl "$url" 2> /dev/null | grep j-sku-discount-price | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+
+      if ($price eq "" || $price eq "\n")
       {
-	    $price = substr $price, 0, $ind;
+        # price without discount
+	      $price = `curl "$url" 2> /dev/null | grep j-sku-price | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+        my $ind = index $price, '-';
+        if ($ind != -1)
+        {
+	        $price = substr $price, 0, $ind;
+        }
       }
     }
+    
+    $self->render(json => {"price" => $price});	
   }
 
-  $self->render(json => {"price" => $price});
+  # PARSER FOR EBAY
+  elsif (index($url, "ebay.com") != -1)
+  {
+  
+    my $space = chr(194) . chr(160);
+
+    my $price = `curl "$url" 2> /dev/null | grep prcIsumConv | awk -F">" '{ print \$3 }' | awk -F"<" '{ print \$1 }' | sed 's/руб.//g; s/$space//g; s/ //g; s/,/./g'`;
+    
+    if ($price eq "" || $price eq "\n")
+    {
+      $price = `curl "$url" 2> /dev/null | grep prcIsum | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/руб.//g; s/$space//g; s/ //g; s/,/./g'`;
+      my $n_index = index $price, "\n";
+      $price = substr $price, $n_index + 1, length($price) - $n_index;
+    }
+
+    my $price2 = `curl "$url" 2> /dev/null | grep convetedPriceId | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/руб.//g; s/$space//g; s/ //g; s/,/./g'`;
+    if ($price2 ne "" && $price2 ne "\n")
+    {
+      $price += $price2;
+    }
+
+    $self->render(json => {"price" => $price});
+  }
 };
+
+
 
 push @{app->commands->namespaces}, 'App::SocialBOM::Command';
 app->start;
