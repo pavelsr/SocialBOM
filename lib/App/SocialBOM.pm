@@ -31,7 +31,7 @@ helper post_helper => sub {
 		when ("boms") { $hash->{url} = get_new_url(5, \&db_func, "url"); }
 	}
 	return $hash;
-}; 
+};
 
 #### CRUD API
 
@@ -96,7 +96,7 @@ get '/api/:coll' => sub {
 	my $self = shift;
 	if (($self->param("coll") eq "items") && ($self->param("bom_id"))) {		# here must a list of objects that cant be retrieved without obligatory extra parametets
 	 	warn "Current BOM ID : ".$self->param("bom_id");
-		
+
 		my @item_ids = $db->get_collection("bom_has_items")->find({ bom_id => $self->param("bom_id") })->fields({ item_id => 1 })->all;
 		my $o = ();
 		# warn Dumper \@item_ids;
@@ -132,7 +132,7 @@ get '/api/:coll/:id' => sub {
 	# CRUD - Read
 	my $self = shift;
 	my $o = $self->read_one($self->param("coll"), $self->param("id"));
-	
+
 	# return all items in BOM
 	if ($self->param("coll") eq "boms") {
 		my @item_ids = $db->get_collection("bom_has_items")->find({ bom_id => $self->param("id") })->fields({ item_id => 1 })->all;
@@ -198,11 +198,11 @@ get '/rates' => sub {
 get '/parser' => sub {
   my $self = shift;
   my $url = $self->req->param('url');
-  
+
   # PARSER FOR ALIEXPRESS
   if (index($url, "aliexpress.com") != -1)
   {
-  
+
     my $price = `curl "$url" 2> /dev/null | grep -e lowPrice -e j-sku-discount-price -e j-sku-price`;
 
     # price with discount and interval
@@ -227,17 +227,17 @@ get '/parser' => sub {
         $price = substr $price, 0, $ind;
       }
     }
-    
-    $self->render(json => {"price" => $price});	
+
+    $self->render(json => {"price" => $price});
   }
 
   # PARSER FOR EBAY
   elsif (index($url, "ebay.com") != -1)
   {
-  
+
     my $list = `curl "$url" 2> /dev/null | grep -e prcIsumConv -e 'id="prcIsum"' -e convetedPriceId`;
     my $price = "";
-    
+
     # item from foreign country
     if (index($list, 'prcIsumConv') != -1)
     {
@@ -256,7 +256,7 @@ get '/parser' => sub {
     {
       $price += $price_send;
     }
-    
+
     my $d_ind = index $price, '.';
     $price = substr $price, 0, $d_ind + 3;
     $self->render(json => {"price" => $price});
