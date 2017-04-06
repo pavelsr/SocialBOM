@@ -1,10 +1,11 @@
 #!/usr/bin/env perl
+
+#use Test::More tests => 6;
+
 use Test::More;
 use Test::Mojo;
 use Data::Dumper;
 
-# use FindBin;
-#require "$FindBin::Bin/../myapp.pl";
 require App::SocialBOM;
  
 my $t = Test::Mojo->new;
@@ -29,9 +30,5 @@ $t->get_ok('/api/items/'.$i);
 $t->get_ok('/api/bom_has_items/')->json_has({bom_id => $b, item_id => $i});
 
 # $t->delete_ok('/api/boms/'.$o);
-
-
-
-
 
 done_testing();
