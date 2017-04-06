@@ -203,23 +203,28 @@ get '/parser' => sub {
   if (index($url, "aliexpress.com") != -1)
   {
   
+    my $price = `curl "$url" 2> /dev/null | grep -e lowPrice -e j-sku-discount-price -e j-sku-price`;
+
     # price with discount and interval
-    my $price = `curl "$url" 2> /dev/null | grep lowPrice | awk -F">" '{ print \$3 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
-
-    if ($price eq "" || $price eq "\n")
+    if (index($price, 'lowPrice') != -1)
     {
-      # price with discount
-      $price = `curl "$url" 2> /dev/null | grep j-sku-discount-price | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+      $price = `echo '$price' | grep lowPrice | awk -F">" '{ print \$3 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+    }
 
-      if ($price eq "" || $price eq "\n")
+    # price with discount
+    elsif (index($price, 'j-sku-discount-price') != -1)
+    {
+      $price = `echo '$price' | grep j-sku-discount-price | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+    }
+
+    # price without discount
+    else
+    {
+      $price = `echo '$price' | grep j-sku-price | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+      my $ind = index $price, '-';
+      if ($ind != -1)
       {
-        # price without discount
-	      $price = `curl "$url" 2> /dev/null | grep j-sku-price | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
-        my $ind = index $price, '-';
-        if ($ind != -1)
-        {
-	        $price = substr $price, 0, $ind;
-        }
+        $price = substr $price, 0, $ind;
       }
     }
     
@@ -230,23 +235,30 @@ get '/parser' => sub {
   elsif (index($url, "ebay.com") != -1)
   {
   
-    my $space = chr(194) . chr(160);
-
-    my $price = `curl "$url" 2> /dev/null | grep prcIsumConv | awk -F">" '{ print \$3 }' | awk -F"<" '{ print \$1 }' | sed 's/руб.//g; s/$space//g; s/ //g; s/,/./g'`;
+    my $list = `curl "$url" 2> /dev/null | grep -e prcIsumConv -e 'id="prcIsum"' -e convetedPriceId`;
+    my $price = "";
     
-    if ($price eq "" || $price eq "\n")
+    # item from foreign country
+    if (index($list, 'prcIsumConv') != -1)
     {
-      $price = `curl "$url" 2> /dev/null | grep prcIsum | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/руб.//g; s/$space//g; s/ //g; s/,/./g'`;
-      my $n_index = index $price, "\n";
-      $price = substr $price, $n_index + 1, length($price) - $n_index;
+      $price = `echo '$list' | grep prcIsumConv | awk -F">" '{ print \$3 }' | awk -F"<" '{ print \$1 }' | sed 's/[^0-9,]//g; s/,/./g'`;
     }
 
-    my $price2 = `curl "$url" 2> /dev/null | grep convetedPriceId | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/руб.//g; s/$space//g; s/ //g; s/,/./g'`;
-    if ($price2 ne "" && $price2 ne "\n")
+    # item from Russia
+    else
     {
-      $price += $price2;
+      $price = `echo '$list' | grep 'id="prcIsum"' | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/[^0-9,]//g; s/,/./g'`;
     }
 
+    # sending price
+    my $price_send = `echo '$list' | grep convetedPriceId | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/[^0-9,]//g; s/,/./g'`;
+    if ($price_send ne "" && $price_send ne "\n")
+    {
+      $price += $price_send;
+    }
+    
+    my $d_ind = index $price, '.';
+    $price = substr $price, 0, $d_ind + 3;
     $self->render(json => {"price" => $price});
   }
 };
