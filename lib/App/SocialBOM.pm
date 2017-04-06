@@ -6,6 +6,7 @@ use Mojolicious::Lite;
 use Data::Dumper;
 use Time::Moment;
 use App::SocialBOM::Url qw(get_new_url);
+#use HTML::TagParser;
 
 use feature "say";
 
@@ -29,8 +30,8 @@ helper post_helper => sub {
 	given($coll_name) {
 		when ("boms") { $hash->{url} = get_new_url(5, \&db_func, "url"); }
 	}
-	return $hash; 
-}; 
+	return $hash;
+};
 
 #### CRUD API
 
@@ -95,7 +96,7 @@ get '/api/:coll' => sub {
 	my $self = shift;
 	if (($self->param("coll") eq "items") && ($self->param("bom_id"))) {		# here must a list of objects that cant be retrieved without obligatory extra parametets
 	 	warn "Current BOM ID : ".$self->param("bom_id");
-		
+
 		my @item_ids = $db->get_collection("bom_has_items")->find({ bom_id => $self->param("bom_id") })->fields({ item_id => 1 })->all;
 		my $o = ();
 		# warn Dumper \@item_ids;
@@ -126,11 +127,12 @@ get '/api/:coll' => sub {
 	}
 };
 
+
 get '/api/:coll/:id' => sub {
 	# CRUD - Read
 	my $self = shift;
 	my $o = $self->read_one($self->param("coll"), $self->param("id"));
-	
+
 	# return all items in BOM
 	if ($self->param("coll") eq "boms") {
 		my @item_ids = $db->get_collection("bom_has_items")->find({ bom_id => $self->param("id") })->fields({ item_id => 1 })->all;
@@ -152,13 +154,12 @@ put '/api/:coll/:id' => sub {
 	$self->render(json => $self->update_one($self->param("coll"), $self->param("id"), $self->req->json) );
 };
 
+
 del '/api/:coll/:id' => sub {
 	# CRUD - Delete. Remove item by ID
 	my $self = shift;
 	$self->render(json=>$self->delete_one( $self->param("coll"), $self->param("id") ) );
 };
-
-
 
 ############################
 
@@ -192,6 +193,76 @@ get '/rates' => sub {
   my $eur = $b[0]->{sell};
   $self->render(json => {"USD" => $usd, "EUR" => $eur});
 };
+
+# HTML_PARSER
+get '/parser' => sub {
+  my $self = shift;
+  my $url = $self->req->param('url');
+
+  # PARSER FOR ALIEXPRESS
+  if (index($url, "aliexpress.com") != -1)
+  {
+
+    my $price = `curl "$url" 2> /dev/null | grep -e lowPrice -e j-sku-discount-price -e j-sku-price`;
+
+    # price with discount and interval
+    if (index($price, 'lowPrice') != -1)
+    {
+      $price = `echo '$price' | grep lowPrice | awk -F">" '{ print \$3 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+    }
+
+    # price with discount
+    elsif (index($price, 'j-sku-discount-price') != -1)
+    {
+      $price = `echo '$price' | grep j-sku-discount-price | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+    }
+
+    # price without discount
+    else
+    {
+      $price = `echo '$price' | grep j-sku-price | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/&nbsp;//g; s/,/./g'`;
+      my $ind = index $price, '-';
+      if ($ind != -1)
+      {
+        $price = substr $price, 0, $ind;
+      }
+    }
+
+    $self->render(json => {"price" => $price});
+  }
+
+  # PARSER FOR EBAY
+  elsif (index($url, "ebay.com") != -1)
+  {
+
+    my $list = `curl "$url" 2> /dev/null | grep -e prcIsumConv -e 'id="prcIsum"' -e convetedPriceId`;
+    my $price = "";
+
+    # item from foreign country
+    if (index($list, 'prcIsumConv') != -1)
+    {
+      $price = `echo '$list' | grep prcIsumConv | awk -F">" '{ print \$3 }' | awk -F"<" '{ print \$1 }' | sed 's/[^0-9,]//g; s/,/./g'`;
+    }
+
+    # item from Russia
+    else
+    {
+      $price = `echo '$list' | grep 'id="prcIsum"' | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/[^0-9,]//g; s/,/./g'`;
+    }
+
+    # sending price
+    my $price_send = `echo '$list' | grep convetedPriceId | awk -F">" '{ print \$2 }' | awk -F"<" '{ print \$1 }' | sed 's/[^0-9,]//g; s/,/./g'`;
+    if ($price_send ne "" && $price_send ne "\n")
+    {
+      $price += $price_send;
+    }
+
+    my $d_ind = index $price, '.';
+    $price = substr $price, 0, $d_ind + 3;
+    $self->render(json => {"price" => $price});
+  }
+};
+
 
 
 push @{app->commands->namespaces}, 'App::SocialBOM::Command';

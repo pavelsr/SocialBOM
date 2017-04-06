@@ -2,28 +2,32 @@
 
 package socialbom;
 
-use Data::Dumper;
-
 # ABSTRACT: SocialBOM CLI tool
 
-use strict;
-use warnings;
-# use Net::EmptyPort qw(empty_port);
+use common::sense;
+use Net::EmptyPort qw(empty_port);
 use Mojolicious::Commands;
-
+use Data::Dumper;
+#use Mojo::Server::Morbo;
 use App::SocialBOM;
+use feature 'say';
 
+#my $morbo = Mojo::Server::Morbo->new;
 my $app_path = $INC{"App/SocialBOM.pm"};
-warn Dumper $app_path;
+my $app = 'App::SocialBOM';
+
+say "Going to run Mojo::Server::Morbo for ".$app_path;
+# $morbo->run($app_path);
+
+my $port = empty_port(3000);
+Mojolicious::Commands->start_app($app, 'daemon', '-l', 'http://*:'.$port);
+
 
 # my $app = 'App::SocialBOM';
-
 # my $module = $app;
 # $module =~ s/::/\//g;
 # $module =~ s/$/.pm/;
-
 # warn $module;
-
 # my $app_path = $INC{$module};
 
 # warn Dumper $app_path;
@@ -31,13 +35,11 @@ warn Dumper $app_path;
 
 # if ($ARGV[0] eq 'morbo') {
 	# $port = empty_port(3000);
-	# Mojolicious::Commands->start_app($app, 'daemon', '-l', 'http://*:'.$port);	
+	# Mojolicious::Commands->start_app($app, 'daemon', '-l', 'http://*:'.$port);
 # }
 
 # if ($ARGV[0] eq 'hypnotoad') {
-# 	$port = empty_port(8000);
-# 	Mojolicious::Commands->start_app('App::SocialBOM', 'daemon', '-l', 'http://*:'.$port);
-# }
+# if ($ARGV[0] eq 'ubic') {
 
 
-Mojolicious::Commands->start_app('App::SocialBOM' => @ARGV);
+#Mojolicious::Commands->start_app('App::SocialBOM');
